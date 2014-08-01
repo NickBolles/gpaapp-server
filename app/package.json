@@ -1,0 +1,16 @@
+{
+  "name": "project-name",
+  "description": "Project Description",
+  "version": "0.0.1",
+  "private": true,
+  "dependencies": {
+    "express": "4.x",
+    "consolidate": "0.10.0",
+    "handlebars": "1.3.x",
+	"body-parser": "*",
+	"cookie-parser": "*",
+	"express-session": "*",
+	"serve-static": "*",
+	"method-override": "*"
+  }
+}
