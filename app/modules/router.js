@@ -2,74 +2,96 @@
 var AM = require('./account-manager');
 var EM = require('./email-dispatcher');
 var DM = require('./data-manager');
+var moment = require('moment');
 
+var testing = true;
+var timer = 0;
 module.exports = function(app) {
 
 // main login page //
         app.get('/gpabot/userdata',function(req,res){
-            AM.validateToken(req.cookies.token, req.cookies.email, function(o, newToken){
-                if (o){
-                    res.cookie('token', newToken, { maxAge: 360000 });
-                    DM.getUserData({email:req.cookies.email},function(e, data){
-                        if (e){
-                            res.header("Access-Control-Allow-Origin", req.headers.origin);
-                            res.status(400).json({'message': e});
-                        }else{
-                            var response = {message: 'ok', data: data};
-                            res.header("Access-Control-Allow-Origin", req.headers.origin);
-                            //may need to be changed to send needed data
-                            res.status(200).json( response );
-                        }
-                    });
+            if (testing){responseBegin('get: /gpabot/userdata');}
+            DM.getUserData({email:req.cookies.email},function(e, data){
+                if (e){
+                    res.status(400).json({'message': e});
+                    if (testing){responseComplete('get: /gpabot/userdata  error');}
                 }else{
-                    
+                    var response = {message: 'ok', data: data};
+                    //may need to be changed to send needed data
+                    res.status(200).json( response );
+                    if (testing){responseComplete('get: /gpabot/userdata  success');}
+
                 }
             });
         });
         app.post('/gpabot/userdata', function(req, res){
-		AM.validateToken(req.cookies.token, req.cookies.email, function(o, newToken){
-                    if (o){
-                        res.cookie('token', newToken, { maxAge: 360000 });
-                        DM.saveUserData({email:req.cookies.email, data: req.body},function(e, data){
-                            
-                        });
-                    }else{
+            if (testing){responseBegin('POST: /gpabot/userdata');}
+		
+            DM.saveUserData(req.cookies.email, req.body ,function(e){
+                if (e){
+                    console.log(e);
+                    res.status(400).json({'message': e});
+                    if (testing){responseComplete('Post: /gpabot/userdata  ERROR');}
+                    
+                }else{
+                    var response = {message: 'ok'};
+                    res.status(200).json( response );
+                    if (testing){responseComplete('Post: /gpabot/userdata  Success');}
+                    
+                }
+            });
 
-                    }
-                });
 	});
 	app.get('/login', function(req, res){
+                if (testing){responseBegin('GET: /login');}
 	// check if the user's credentials are saved in a cookie //
 		if (req.cookies.token == undefined){
 			res.render('login', { title: 'Hello - Please Login To Your Account' });
+                        if (testing){responseComplete('get: /login   error');}
 		}	else{
 	// attempt automatic login //
-			AM.autoLogin(req.cookies.token, function(o){
-				if (o != null){
-				    req.session.user = o;
-					res.redirect('/home');
-				}	else{
-					res.render('login', { title: 'Hello - Please Login To Your Account' });
-				}
+			AM.autoLogin(req, function(e, user){
+                            if (e){
+				res.status(400).json({'message': e});
+                                if (testing){responseComplete('POST: /login  ERROR');}1
+                                res.end;
+                            }
+                            if (user){
+                                res.header("Access-Control-Allow-Origin", req.headers.origin);
+
+                                req.session.user = o;
+                                res.redirect('/home');
+                                
+                                if (testing){responseComplete('get: /login  Success');}  
+                            }	
+                            else{
+                                res.render('login', { title: 'Hello - Please Login To Your Account' });
+                            }
 			});
 		}
 	});
 	
 	app.post('/login', function(req, res){
+                if (testing){responseBegin('POST: /login');}
 		AM.manualLogin(req.param('email'), req.param('p'), function(e, user){
 			if (!user){
                                 res.header("Access-Control-Allow-Origin", req.headers.origin);
                                 //may need to be changed to send needed data
 				res.status(400).json({'message': e});
+                                if (testing){responseComplete('POST: /login  ERROR');}
 			}	else{
                                 
                                 req.session.user = user;
-				res.cookie('token', user.token, { maxAge: 360000 });
+                                
+                                //give the user a token that will be validated for every request after this
+				res.cookie('token', user.newToken, { maxAge: 360000 });
                                 res.cookie('email', user.email);
 				var response = {message: 'ok'};
                                 res.header("Access-Control-Allow-Origin", req.headers.origin);
+                                res.header("Access-Control-Allow-Credentials" , 'true');
                                 //may need to be changed to send needed data
 				res.status(200).json( response );
+                                if (testing){responseComplete('POST: /login  Success');}
 			}
 		});
 	});
@@ -118,10 +140,12 @@ module.exports = function(app) {
 // creating new accounts //
 	
 	app.get('/signup', function(req, res) {
+                if (testing){responseBegin('GET: /signup');}
 		res.render('signup', {  title: 'Signup'});
 	});
 	
 	app.post('/signup', function(req, res){
+                if (testing){responseBegin('POST: /signup');}
 		AM.addNewAccount({
 			name 	: req.param('name'),
 			email 	: req.param('email'),
@@ -138,11 +162,12 @@ module.exports = function(app) {
                                 res.header("Access-Control-Allow-Origin", req.headers.origin);
                                 //may need to be changed to send needed data
 				res.status(201).json({'message': 'AccountCreated'});
-				
+				if (testing){responseComplete('Post: /gpabot/userdata  Success');}
 			}
 		});
 	});
         app.options('/posts', function(req, res){
+            if (testing){responseBegin('POST: /posts');}
             console.log("writing headers only");
             res.header("Access-Control-Allow-Origin", "*");
             res.end('');
@@ -228,4 +253,25 @@ module.exports = function(app) {
 	
 	app.get('*', function(req, res) { res.render('404', { title: 'Page Not Found'}); });
 
+    var responseComplete = function(message){
+                                var ET =  moment();
+                                var ST = app.get('t1');
+                                var fST = moment(ST).format("H:mm:ss:SSS");
+                                var fET = moment(ET).format("H:mm:ss:SSS");
+                                app.set('t2', ET);
+                                console.log('***********************************************************');
+                                console.log('Response Complete ' + message);
+                                console.log('TIMING-- Start: ' + fST + ' End: ' + fET + ' Diff: ' + ET.diff(ST) + 'ms');
+                                console.log('***********************************************************');
+
+                            }
+    var responseBegin = function(message){
+                                var startTime = moment();
+                                app.set('t1', startTime );
+                                console.log('***********************************************************');
+                                console.log(message + ' Response Begin');
+                                console.log('TIMEING--START: ' + startTime);
+                                console.log('***********************************************************');
+
+                            }
 };
