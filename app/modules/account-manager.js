@@ -62,18 +62,21 @@ exports.manualLogin = function(email, pass, callback){
                     console.log(JSON.stringify(user));
                     console.log(user.password + '    ' + pass);
                 }
-                validatePassword(pass, user.password, user.salt, function(err, res) {
+                validatePassword(pass, user.password, user.salt, function(err, match) {
                                         if (err){
                                                 callback('Invalid Password. Please Try Again.');
 
-                                        }	else{
-                                            token.createAndSave(email, function(e,newToken){
-                                                console.log('New Token is ' + newToken);
-                                                callback(null, {newToken:newToken,email: email});
-                                                
-                                            });
-                                                
-                                                //This may need to be modified
+                                        }else{
+                                            //No Error but now we need to check if the passwords matched
+                                            if (match){
+                                                token.createAndSave(email, function(e,newToken){
+                                                    console.log('New Token is ' + newToken);
+                                                    callback(null, newToken, email);
+                                                });
+                                            }    
+                                            else{
+                                                callback('Invalid Password. Please Try Again')
+                                            }
                                         }
                                 });
             }else{

@@ -7,12 +7,13 @@ var session         = require('express-session');
 var static          = require('serve-static');
 var methodOverride  = require('method-override');
 var moment          = require('moment');
+var log             = require('./modules/log.js');
 var token           = require('./modules/token-manager.js');
 
 var app = express(function(){
     
 });
-
+var testing = true;
 
 app.set('port', 8080);
 app.set('views', __dirname + '/views');
@@ -30,14 +31,20 @@ app.use(session({ secret: 'super-duper-secret-secret' }));
 app.use(methodOverride());
 app.use(static(__dirname + '/public'));
 app.use(function(req, res, next){
-    res.header("Access-Control-Allow-Origin", req.headers.origin);
-    res.header("Access-Control-Allow-Credentials" , true);
+    console.log(JSON.stringify(req.headers) + JSON.stringify(req.cookies));
+    //console.log(JSON.stringify(res));
     if (req.path !== '/login' && req.path !== '/signup'){
-        token.validate(req, res, function(e, newToken){
+        token.validate(req, res, function(e){
             if (e){
                 console.log('token Invalid, responding with error: ' + e);
                 //may need to be changed to send needed data
                 res.status(400).json({'message': e});
+                res.end;
+                if (testing){
+                            console.log('***********************************************************');
+                            console.log('Response Complete ' + 'ERROR FAILED TOKEN AUTHENTICATION');
+                            console.log('***********************************************************');
+                        }
             }
             else{
                 console.log('token Verified, continueing...');
@@ -46,8 +53,14 @@ app.use(function(req, res, next){
         });
     }else{
         next();
-    }
-})
+    }    
+});
+app.use(function(req, res, next){
+    res.header("Access-Control-Allow-Origin", req.headers.origin);
+    res.header("Access-Control-Allow-Credentials" , true);
+    next();
+       
+});    
 
 
 

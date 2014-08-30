@@ -73,22 +73,23 @@ module.exports = function(app) {
 	
 	app.post('/login', function(req, res){
                 if (testing){responseBegin('POST: /login');}
-		AM.manualLogin(req.param('email'), req.param('p'), function(e, user){
-			if (!user){
-                                res.header("Access-Control-Allow-Origin", req.headers.origin);
+		AM.manualLogin(req.param('email'), req.param('p'), function(e, newToken, email){
+			if (!newToken){
                                 //may need to be changed to send needed data
 				res.status(400).json({'message': e});
                                 if (testing){responseComplete('POST: /login  ERROR');}
 			}	else{
-                                
-                                req.session.user = user;
+                                if (testing){console.log('User Logged in successfully. user object is' + email + newToken);}
+                                //req.session.user = email;
                                 
                                 //give the user a token that will be validated for every request after this
-				res.cookie('token', user.newToken, { maxAge: 360000 });
-                                res.cookie('email', user.email);
+                                //res.header("Access-Control-Allow-Origin", req.headers.origin);
+                                //res.header("Access-Control-Allow-Credentials" , true);
+				res.cookie('token', newToken, {path: '/', httpOnly:true});
+                                res.cookie('email', email, {path: '/', httpOnly:true});
+                                console.log('COOKIES SET COOKIES ARE' + JSON.stringify(res.cookies));
+                                console.log('COOKIES SET COOKIES ARE' + JSON.stringify(req.cookies));
 				var response = {message: 'ok'};
-                                res.header("Access-Control-Allow-Origin", req.headers.origin);
-                                res.header("Access-Control-Allow-Credentials" , 'true');
                                 //may need to be changed to send needed data
 				res.status(200).json( response );
                                 if (testing){responseComplete('POST: /login  Success');}

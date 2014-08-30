@@ -46,8 +46,8 @@ exports.validate = function(req, res, callback){
                                 }
                                 else{
                                     if (testing){console.log('Token Valid! New Token Saved.');}
-                                    res.cookie('token', token, { maxAge: 360000 });
-                                    res.cookie('email', email);
+                                    res.cookie('token', token, { maxAge: 360000, httpOnly: true });
+                                    res.cookie('email', email, {httpOnly: true});
                                     callback(null, res, newToken);
                                 }
                             });
