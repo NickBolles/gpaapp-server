@@ -3,45 +3,84 @@ var AM = require('./account-manager');
 var EM = require('./email-dispatcher');
 var DM = require('./data-manager');
 var moment = require('moment');
+var utils = require('./utils.js');
 
 var testing = true;
 var timer = 0;
 module.exports = function(app) {
 
 // main login page //
-        app.get('/gpabot/userdata',function(req,res){
-            if (testing){responseBegin('get: /gpabot/userdata');}
-            DM.getUserData({email:req.cookies.email},function(e, data){
-                if (e){
-                    res.status(400).json({'message': e});
-                    if (testing){responseComplete('get: /gpabot/userdata  error');}
-                }else{
-                    var response = {message: 'ok', data: data};
-                    //may need to be changed to send needed data
-                    res.status(200).json( response );
-                    if (testing){responseComplete('get: /gpabot/userdata  success');}
+    app.get('/gpabot/userdata',function(req,res){
+        if (testing){responseBegin('get: /gpabot/userdata');}
+        DM.getUserData({email:req.cookies.email},function(e, data){
+            if (e){
+                res.status(400).json({'message': e});
+                if (testing){responseComplete('get: /gpabot/userdata  error');}
+            }else{
+                var response = {message: 'ok', data: data};
+                //may need to be changed to send needed data
+                res.status(200).json( response );
+                if (testing){responseComplete('get: /gpabot/userdata  success');}
 
-                }
-            });
+            }
         });
-        app.post('/gpabot/userdata', function(req, res){
-            if (testing){responseBegin('POST: /gpabot/userdata');}
-		
-            DM.saveUserData(req.cookies.email, req.body ,function(e){
+    });
+    app.post('/gpabot/userdata', function(req, res){
+        if (testing){responseBegin('POST: /gpabot/userdata');}
+        console.log('req.body is ' + req.body);
+        //console.log('req.body is ' + JSON.stringify(req.body));
+        if (req.body.force == 'true') {
+
+            DM.saveUserData(req.cookies.email, req.body.data, function(e){
                 if (e){
                     console.log(e);
                     res.status(400).json({'message': e});
                     if (testing){responseComplete('Post: /gpabot/userdata  ERROR');}
-                    
+
                 }else{
                     var response = {message: 'ok'};
                     res.status(200).json( response );
                     if (testing){responseComplete('Post: /gpabot/userdata  Success');}
-                    
                 }
             });
+        }else{
+
+            DM.syncUserData(req.cookies.email, req.body , function(e, userData){
+                if (e){
+                    console.log(e);
+                    res.status(400).json({'message': e});
+                    if (testing){responseComplete('Post: /gpabot/userdata  ERROR');}
+
+                }else{
+                    console.log('DATA SYNCED userData is ' + userData);
+                    userData = utils.toStr(userData);
+                    var response = {message: 'ok', data: userData};
+                    res.status(200).json( response );
+                    if (testing){responseComplete('Post: /gpabot/userdata  Success');}
+                }
+            });
+        }
 
 	});
+    app.delete('/gpabot/userdata', function(req,res){
+        if (testing){responseBegin('DELETE: /gpabot/userdata');}
+        console.log('req.body is ' + req.body);
+        //console.log('req.body is ' + JSON.stringify(req.body));
+        DM.deleteItem(req.cookies.email, req.body , function(e, userData){
+            if (e){
+                console.log(e);
+                res.status(400).json({'message': e});
+                if (testing){responseComplete('Post: /gpabot/userdata  ERROR');}
+
+            }else{
+                console.log('DATA SYNCED userData is ' + userData);
+                userData = utils.toStr(userData);
+                var response = {message: 'ok', data: userData};
+                res.status(200).json( response );
+                if (testing){responseComplete('Post: /gpabot/userdata  Success');}
+            }
+        });
+    });
 	app.get('/login', function(req, res){
                 if (testing){responseBegin('GET: /login');}
 	// check if the user's credentials are saved in a cookie //
@@ -85,7 +124,7 @@ module.exports = function(app) {
                                 //give the user a token that will be validated for every request after this
                                 //res.header("Access-Control-Allow-Origin", req.headers.origin);
                                 //res.header("Access-Control-Allow-Credentials" , true);
-				res.cookie('token', newToken, {path: '/', httpOnly:true});
+				                res.cookie('token', newToken, {path: '/', httpOnly:true});
                                 res.cookie('email', email, {path: '/', httpOnly:true});
                                 console.log('COOKIES SET COOKIES ARE' + JSON.stringify(res.cookies));
                                 console.log('COOKIES SET COOKIES ARE' + JSON.stringify(req.cookies));
@@ -151,7 +190,8 @@ module.exports = function(app) {
 			name 	: req.param('name'),
 			email 	: req.param('email'),
 			pass	: req.param('p'),
-                        uuid    : req.param('uuid')
+            uuid    : req.param('uuid'),
+            appId   : req.param('appId')
 		}, function(e){
 			if (e){
                             console.log(e);
@@ -163,7 +203,7 @@ module.exports = function(app) {
                                 res.header("Access-Control-Allow-Origin", req.headers.origin);
                                 //may need to be changed to send needed data
 				res.status(201).json({'message': 'AccountCreated'});
-				if (testing){responseComplete('Post: /gpabot/userdata  Success');}
+				if (testing){responseComplete('Post: /signup  Success');}
 			}
 		});
 	});

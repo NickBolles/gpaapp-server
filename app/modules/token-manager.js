@@ -46,8 +46,8 @@ exports.validate = function(req, res, callback){
                                 }
                                 else{
                                     if (testing){console.log('Token Valid! New Token Saved.');}
-                                    res.cookie('token', token, { maxAge: 360000, httpOnly: true });
-                                    res.cookie('email', email, {httpOnly: true});
+                                    res.cookie('token', newToken, {path: '/', httpOnly:true});
+                                    res.cookie('email', email, {path: '/', httpOnly:true});
                                     callback(null, res, newToken);
                                 }
                             });
@@ -57,8 +57,8 @@ exports.validate = function(req, res, callback){
                             callback('Token Does not match stored Token');
                         }
                     }else{
-                        if (testing){console.log('Invalid Email');}
-                        callback('Invalid Email');
+                        if (testing){console.log('Invalid Email in session cookie');}
+                        callback('Invalid Email In Session Cookie');
                     }
                 }
         });
